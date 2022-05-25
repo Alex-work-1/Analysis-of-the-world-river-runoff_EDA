@@ -1,45 +1,58 @@
 # This program demonstartes the mean, global value of river runoff over a time
+library("ggplot2") 
 
 
-#data_working_dir <- paste0(dirname(getwd()), "/data") #--if working dir is "EDA work/code", then use this
 # setwd("data")
 
 
 # read csv table
-grdc_selection <- read.csv("grdc_selection.csv", header = TRUE)
+data_1961_1990 <- read.csv("data (1961 - 1990).csv", header = TRUE)
+data_1991_2020 <- read.csv("data (1991 - 2020).csv", header = TRUE)
 
 
-
-# getting rid of NAs in LQ, MQ and HQ columns and replacing it with the mean value of the station of all the time
-
-grdc_selection[, "LQ"][is.na(grdc_selection[,"LQ"])] <- mean(grdc_selection$LQ, by = grdc_selection$ID, 
-                                                  na.rm = TRUE)
-
-grdc_selection[, "MQ"][is.na(grdc_selection[,"MQ"])] <- mean(grdc_selection$MQ, by = grdc_selection$ID, 
-                                                             na.rm = TRUE)
-
-grdc_selection[, "HQ"][is.na(grdc_selection[,"HQ"])] <- mean(grdc_selection$HQ, by = grdc_selection$ID, 
-                                                             na.rm = TRUE)
+data_1961_2020 <- read.csv("data (1961 - 2020).csv", header = TRUE)
 
 
+data_1961_2020_mean <- aggregate(x = data_1961_2020$HQ,     
+          
+          by = list(data_1961_2020$Year),      
+          
+          FUN = mean)
 
-# getting the common minimum and maximum year of stations data
-# getting the COMMON minimum
-dt_start <- grdc_selection[!duplicated(grdc_selection[c('River')]), ]
-max(dt_start$Year)
+colnames(data_1961_2020_mean) <- c("Year", "HQ")
 
-# getting the COMMON maximum
-dt_end <- grdc_selection[!duplicated(grdc_selection[c('River')], fromLast = TRUE), ]
-min(dt_end$Year)
+data_1961_2020_temporary <- aggregate(x = data_1961_2020$MQ,     
+          
+          by = list(data_1961_2020$Year),      
+          
+          FUN = mean)
+colnames(data_1961_2020_temporary) <- c("Year", "MQ")
 
-
-# We have got the unbroken period of collected data -- 1935-1972 year
-# As our task is to analyse period between 1961 - 2020, we have to filter all stations & years which doesn't suits this period, in order to not get big rises or falling on graph because of getting/loosing data of additional stations. We need a continuous data.
+data_1961_2020_mean$MQ <- data_1961_2020_temporary$MQ
 
 
-# filtering years/stations which is not in the year range 1961 - 2020.
-grdc_selection[grdc_selection$Year >= 1961 && grdc_selection$Year <= 2020]
+data_1961_2020_temporary <- aggregate(x = data_1961_2020$LQ,     
+          
+          by = list(data_1961_2020$Year),      
+          
+          FUN = mean)
+colnames(data_1961_2020_temporary) <- c("Year", "LQ")
+data_1961_2020_mean$LQ <- data_1961_2020_temporary$LQ
 
-dt_end
 
-# aggregate(grdc_selection$LQ, by = list(grdc_selection$Year), FUN=mean(), na.action) 
+data_1961_2020_mean <- data_1961_2020_mean[!(data_1961_2020_mean$Year < 1961),]
+
+
+jpeg("1961-2020.jpeg", quality = 100)
+
+ggplot(data_1961_2020_mean) +  
+  geom_smooth(aes(x = Year, y = HQ), method = "loess", color = "red") +
+  geom_smooth(aes(x = Year, y = MQ), method = "loess", color = "green") +
+  geom_smooth(aes(x = Year, y = LQ), method = "loess", color = "blue") +
+  geom_vline(xintercept=1990, color = "red", size = 2) + 
+  xlab("Year") +
+  ylab("Runoff")
+  
+dev.off()
+
+# aggregate(data_1961_2020$LQ, by = list(data_1961_2020$Year), FUN=mean(), na.action) 
